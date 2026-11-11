@@ -1,0 +1,6 @@
+let endpoint='';
+export function backendURL(){return endpoint}
+async function configured(){if(endpoint)return endpoint;const r=await fetch(import.meta.env.BASE_URL+'backend.json',{cache:'no-store'});if(!r.ok)throw Error('共享后台尚未配置');const c=await r.json();if(typeof c.url!=='string'||!c.url.startsWith('https://'))throw Error('共享后台配置无效');endpoint=c.url.replace(/\/$/,'');return endpoint}
+function normalize(v:any):any{if(Array.isArray(v))return v.map(normalize);if(v&&typeof v==='object'){const o={...v};if(typeof o.model==='string'&&o.model.startsWith('/api/model/'))o.model=endpoint+o.model;if(Array.isArray(o.items))o.items=o.items.map(normalize);return o}return v}
+export async function api(url:string,body?:any,method?:string):Promise<any>{const base=await configured();const token=localStorage.getItem('wish-shared-token');const r=await fetch(base+url,{method:method||(body?'POST':'GET'),headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Error(data.error||'暂时无法完成请求');return normalize(data)}
+export async function joinRoom(code:string){const data=await api('/api/session',{code});localStorage.setItem('wish-shared-token',data.token)}
